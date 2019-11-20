@@ -160,4 +160,8 @@ Error: [WARN] Cannot find machine type pc-i440fx-rhel7.6.0 for hvm/x86_64 in {{ 
 
 ```
 
-
+to workaround above;
+```
+sudo mv /usr/bin/qemu-system-x86_64 /usr/bin/qemu-system-x86_64.backup
+sudo ln -s /usr/libexec/qemu-kvm /usr/bin/qemu-system-x86_64
+```
