@@ -1,53 +1,43 @@
 
+// create volume from base image
 resource "libvirt_volume" "my-volume" {
-  name           = "${var.myvm.name}-volume"
+  count = length(var.vms)
+  name           = "${var.vms[count.index].name}-volume"
   base_volume_id = var.base_image_id
   pool           = "images"
-  size           = var.myvm.disk_mb
-}
-
-
-data "template_file" "user-data-template" {
-  template = file("${path.module}/../cloud_init_resize.cfg")
-}
-
-
-data template_file "network-config-template" {
-  template = file("${path.module}/../network_config.tpl")
-  vars = {
-    myip = var.myvm.ip1
-    mysubnet = var.myvm.subnet1
-  }
+  size           = var.vms[count.index].disk_mb
 }
 
 resource "libvirt_cloudinit_disk" "my-cloud-init" {
-  name      = "${var.myvm.name}-init.iso"
+  count = length(var.vms)
+  name      = "${var.vms[count.index].name}-init.iso"
   pool   = "images"
-  user_data = data.template_file.user-data-template.rendered
-  network_config = data.template_file.network-config-template.rendered
+  user_data = templatefile("${path.module}/${var.vms[count.index].user_data_template}",var.vms[count.index])
+  network_config = templatefile("${path.module}/network_config.tpl",var.vms[count.index])
 }
 
 
 
 // set boot order hd, network
 resource "libvirt_domain" "myvm" {
-  name   = var.myvm.name
-  memory = var.myvm.mem_mb
-  vcpu   = var.myvm.vcpu
+  count = length(var.vms)
+  name   = var.vms[count.index].name
+  memory = var.vms[count.index].mem_mb
+  vcpu   = var.vms[count.index].vcpu
 
   network_interface {
-    bridge = var.myvm.bridge1
-    mac    = var.myvm.mac1
+    bridge = var.vms[count.index].bridge1
+    mac    = var.vms[count.index].mac1
   }
 
 //  boot_device {
 //    dev = ["hd", "network"]
 //  }
 
-  cloudinit = libvirt_cloudinit_disk.my-cloud-init.id
+  cloudinit = libvirt_cloudinit_disk.my-cloud-init[count.index].id
 
   disk {
-    volume_id = libvirt_volume.my-volume.id
+    volume_id = libvirt_volume.my-volume[count.index].id
   }
 
   console {
